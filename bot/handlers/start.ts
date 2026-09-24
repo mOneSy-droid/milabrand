@@ -1,6 +1,6 @@
 import { Context } from 'grammy';
 import prisma from '../../lib/prisma';
-import { isAdmin, WEB_APP_URL } from '../config';
+import { isAdmin, WEB_APP_URL, getSafeWebAppUrl, getOpenShopInlineKeyboard } from '../config';
 
 export async function handleStartCommand(ctx: Context) {
   const from = ctx.from;
@@ -16,7 +16,7 @@ export async function handleStartCommand(ctx: Context) {
             [{ text: '➕ Tovar qo‘shish' }, { text: '📦 Tovarlar' }],
             [{ text: '🗂 Kategoriyalar' }, { text: '✏️ Tovarni tahrirlash' }],
             [{ text: '🗑 Tovarni o‘chirish' }, { text: '📊 Statistika' }],
-            [{ text: '🛍 MILA Shop (Web App)', web_app: { url: WEB_APP_URL } }],
+            [{ text: '🛍 MILA Shop (Web App)', ...(getSafeWebAppUrl().startsWith('https://') ? { web_app: { url: getSafeWebAppUrl() } } : {}) }],
           ],
           resize_keyboard: true,
         },
@@ -31,20 +31,32 @@ export async function handleStartCommand(ctx: Context) {
       where: { telegramId: BigInt(from.id) },
     });
 
+    const webAppUrl = getSafeWebAppUrl();
+    const isHttps = webAppUrl.startsWith('https://');
+
     if (existingUser && existingUser.isVerified && existingUser.phone) {
+      // Set chat menu button if supported
+      try {
+        if (isHttps) {
+          await ctx.api.setChatMenuButton({
+            chat_id: from.id,
+            menu_button: {
+              type: 'web_app',
+              text: '🛍 Sayt',
+              web_app: { url: webAppUrl },
+            },
+          });
+        }
+      } catch (e) {}
+
       await ctx.reply(
-        `Xush kelibsiz, ${existingUser.firstName || 'hurmatli mijoz'}!\n\nMILA Luxury Fashion katalogini ochish uchun quyidagi tugmani bosing:`,
+        `Xush kelibsiz, <b>${existingUser.firstName || 'hurmatli mijoz'}</b>!\n\n` +
+        `MILA Luxury Fashion katalogini ochish va xaridlarni boshlash uchun quyidagi havola yoki tugmani bosing:\n\n` +
+        `🔗 <b>Sayt havolasi:</b> <a href="${webAppUrl}">${webAppUrl}</a>`,
         {
+          parse_mode: 'HTML',
           reply_markup: {
-            keyboard: [
-              [
-                {
-                  text: '🛍 MILA Shop',
-                  web_app: { url: WEB_APP_URL },
-                },
-              ],
-            ],
-            resize_keyboard: true,
+            inline_keyboard: getOpenShopInlineKeyboard(webAppUrl),
           },
         }
       );

@@ -1,6 +1,6 @@
 import { Context } from 'grammy';
 import prisma from '../../lib/prisma';
-import { WEB_APP_URL } from '../config';
+import { WEB_APP_URL, getSafeWebAppUrl, getOpenShopInlineKeyboard } from '../config';
 
 /**
  * Normalizes a phone number to international format, e.g. +998901234567
@@ -67,20 +67,51 @@ export async function handleContactMessage(ctx: Context) {
 
     console.log(`[BOT] User registered/verified: ${user.telegramId} (${normalizedPhone})`);
 
-    // Show success message and WebApp button
-    await ctx.reply(
-      '✅ Telefon raqamingiz tasdiqlandi.\n\nEndi MILA katalogidan foydalanishingiz mumkin.',
-      {
-        reply_markup: {
-          keyboard: [
-            [
-              {
-                text: '🛍 MILA Shop',
-                web_app: { url: WEB_APP_URL },
-              },
-            ],
+    const webAppUrl = getSafeWebAppUrl();
+    const isHttps = webAppUrl.startsWith('https://');
+
+    // 1. Try setting native Telegram Web App menu button
+    try {
+      if (isHttps) {
+        await ctx.api.setChatMenuButton({
+          chat_id: fromUser.id,
+          menu_button: {
+            type: 'web_app',
+            text: '🛍 Sayt',
+            web_app: { url: webAppUrl },
+          },
+        });
+      }
+    } catch (e) {
+      // Ignored
+    }
+
+    // 2. Update persistent reply keyboard to "Saytni ochish"
+    await ctx.reply('✅ Telefon raqamingiz muvaffaqiyatli tasdiqlandi!', {
+      reply_markup: {
+        keyboard: [
+          [
+            {
+              text: '🛍 Saytni ochish',
+              ...(isHttps ? { web_app: { url: webAppUrl } } : {}),
+            },
           ],
-          resize_keyboard: true,
+        ],
+        resize_keyboard: true,
+      },
+    });
+
+    // 3. Send official site link and interactive open buttons
+    await ctx.reply(
+      `🎉 <b>Tabriklaymiz, ro‘yxatdan muvaffaqiyatli o‘tdingiz!</b>\n\n` +
+      `MILA Luxury Brand do‘konimizga xush kelibsiz.\n` +
+      `Eksklyuziv sumkalar to‘plamini ko‘rish va xarid qilish uchun quyidagi havola orqali saytni oching:\n\n` +
+      `🔗 <b>Sayt havolasi:</b> <a href="${webAppUrl}">${webAppUrl}</a>\n\n` +
+      `<i>Saytga kirish uchun quyidagi tugmani bosing:</i>`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: getOpenShopInlineKeyboard(webAppUrl),
         },
       }
     );
