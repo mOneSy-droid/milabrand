@@ -13,7 +13,7 @@ export interface AppUser {
   firstName?: string | null;
   lastName?: string | null;
   username?: string | null;
-  phone: string;
+  phone?: string | null;
   isVerified: boolean;
   createdAt: string;
 }

@@ -46,26 +46,30 @@ export async function POST(req: NextRequest) {
     }
 
     const telegramId = BigInt(authResult.user.id);
-    const user = await prisma.user.findUnique({
-      where: { telegramId },
-    });
-
-    if (!user) {
-      return NextResponse.json({
-        ok: true,
-        verified: false,
-        user: null,
-        message: 'Foydalanuvchi ro‘yxatdan o‘tmagan. Iltimos, Telegram botda telefon raqamingizni tasdiqlang.',
+    let user: any = null;
+    try {
+      user = await prisma.user.findUnique({
+        where: { telegramId },
       });
+    } catch (e) {
+      // Prisma error fallback
     }
 
-    if (!user.isVerified || !user.phone) {
-      return NextResponse.json({
-        ok: true,
-        verified: false,
-        user: null,
-        message: 'Telefon raqami tasdiqlanmagan. Iltimos, Telegram botda telefon raqamingizni tasdiqlang.',
-      });
+    if (!user) {
+      try {
+        user = await prisma.user.create({
+          data: {
+            telegramId,
+            firstName: authResult.user.first_name,
+            lastName: authResult.user.last_name || null,
+            username: authResult.user.username || null,
+            phone: '',
+            isVerified: true,
+          },
+        });
+      } catch (e) {
+        // Fallback
+      }
     }
 
     return NextResponse.json({

@@ -2,14 +2,15 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Trash2, Heart, Plus, Minus, Check, ShoppingBag } from 'lucide-react';
-import { CartItemModel, ProductItem } from '@/lib/types';
-import { triggerHaptic, triggerHapticNotification } from '@/lib/telegram-client';
+import { ArrowLeft, Trash2, Heart, Plus, Minus, Check, ShoppingBag, Send } from 'lucide-react';
+import { CartItemModel, ProductItem, AppUser } from '@/lib/types';
+import { triggerHaptic, triggerHapticNotification, getTelegramWebApp } from '@/lib/telegram-client';
 import { translations, Language } from '@/lib/i18n';
 import ProductCard from './ProductCard';
 
 interface CartViewProps {
   cartItems: CartItemModel[];
+  user?: AppUser | null;
   onUpdateQty: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearSelected: (productIds: string[]) => void;
@@ -23,6 +24,7 @@ interface CartViewProps {
 
 export const CartView: React.FC<CartViewProps> = ({
   cartItems,
+  user,
   onUpdateQty,
   onRemoveItem,
   onClearSelected,
@@ -39,7 +41,7 @@ export const CartView: React.FC<CartViewProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     new Set(cartItems.map((item) => item.productId))
   );
-  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Toggle selection
   const toggleSelect = (productId: string) => {
@@ -90,12 +92,68 @@ export const CartView: React.FC<CartViewProps> = ({
     return `/api/images/${img.id}`;
   };
 
-  const handleCheckout = () => {
+  // DIRECT ORDER TO @milabranduz ON "TASDIQLASH" CLICK - NO CONFIRMATION SCREEN
+  const handleDirectOrder = async () => {
+    if (selectedItems.length === 0) return;
+    setIsSubmitting(true);
     triggerHapticNotification('success');
-    setOrderPlaced(true);
+
+    // 1. Build text message for Telegram @milabranduz
+    let orderText = `Assalomu alaykum! MILA brendidan buyurtma bermoqchiman:\n\n`;
+
+    selectedItems.forEach((item, idx) => {
+      const p = item.product;
+      const itemTotal = p.price * item.quantity;
+      orderText += `${idx + 1}. ${p.name}\n   ${item.quantity} ta × ${p.price.toLocaleString('uz-UZ')} = ${itemTotal.toLocaleString('uz-UZ')} UZS\n`;
+    });
+
+    orderText += `\n💰 Jami summa: ${totalAmount.toLocaleString('uz-UZ')} UZS\n`;
+    if (user?.phone) {
+      orderText += `📱 Telefon: ${user.phone}\n`;
+    }
+    if (user?.firstName) {
+      orderText += `👤 Buyurtmachi: ${user.firstName}${user.lastName ? ' ' + user.lastName : ''}\n`;
+    }
+    if (user?.username) {
+      orderText += `💬 Telegram: @${user.username}\n`;
+    }
+
+    // 2. Clear selected items from cart immediately
+    const idsToRemove = selectedItems.map((i) => i.productId);
+    onClearSelected(idsToRemove);
+
+    // 3. Save order silently in background (logs order & notifies admin bot)
+    try {
+      const tg = getTelegramWebApp();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (tg?.initData) headers['x-telegram-init-data'] = tg.initData;
+
+      fetch('/api/orders', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          notes: 'Telegram @milabranduz orqali yuborildi',
+          items: selectedItems,
+        }),
+      }).catch((e) => console.warn('Background order save error:', e));
+    } catch (e) {
+      console.warn('Error saving order:', e);
+    }
+
+    // 4. Redirect immediately to @milabranduz in Telegram
+    const targetUrl = `https://t.me/milabranduz?text=${encodeURIComponent(orderText)}`;
+    const tg = getTelegramWebApp();
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(targetUrl);
+    } else {
+      window.location.href = targetUrl;
+    }
+
+    setIsSubmitting(false);
+    onGoToCatalog();
   };
 
-  if (cartItems.length === 0 && !orderPlaced) {
+  if (cartItems.length === 0) {
     return (
       <div className="min-h-[75vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-20 h-20 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary mb-4 shadow-inner">
@@ -140,27 +198,7 @@ export const CartView: React.FC<CartViewProps> = ({
         <div className="w-8" />
       </div>
 
-      {orderPlaced ? (
-        <div className="p-6 text-center my-8">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 stroke-[2.5]" />
-          </div>
-          <h2 className="text-lg font-bold text-brand-black mb-2">Buyurtmangiz qabul qilindi!</h2>
-          <p className="text-xs text-gray-600 max-w-xs mx-auto mb-6 leading-relaxed">
-            Tez orada menejerimiz siz bilan bog‘lanib yetkazib berish ma’lumotlarini aniqlashtiradi.
-          </p>
-          <button
-            onClick={() => {
-              setOrderPlaced(false);
-              onGoToCatalog();
-            }}
-            className="bg-brand-primary text-white text-xs font-semibold py-2.5 px-6 rounded-2xl"
-          >
-            Katalogga qaytish
-          </button>
-        </div>
-      ) : (
-        <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4">
           {/* Subheader: Delete Selected & Select All (Matching Screenshot 5) */}
           <div className="flex items-center justify-between px-1">
             <button
@@ -346,10 +384,9 @@ export const CartView: React.FC<CartViewProps> = ({
             </div>
           )}
         </div>
-      )}
 
-      {/* Sticky Bottom Checkout Bar (Matching Screenshot 5) */}
-      {!orderPlaced && cartItems.length > 0 && (
+      {/* Sticky Bottom Checkout Bar (Matching Screenshot 5) -> DIRECT TO @milabranduz */}
+      {cartItems.length > 0 && (
         <div
           className="fixed bottom-[68px] inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 shadow-lg flex items-center justify-between gap-4 max-w-lg mx-auto"
         >
@@ -363,15 +400,16 @@ export const CartView: React.FC<CartViewProps> = ({
           </div>
 
           <button
-            onClick={handleCheckout}
-            disabled={totalQuantity === 0}
-            className={`flex-1 max-w-[210px] py-3 px-4 rounded-2xl text-xs font-semibold text-white shadow-sm flex items-center justify-center transition-all ${
-              totalQuantity > 0
+            onClick={handleDirectOrder}
+            disabled={totalQuantity === 0 || isSubmitting}
+            className={`flex-1 max-w-[210px] py-3 px-4 rounded-2xl text-xs font-semibold text-white shadow-sm flex items-center justify-center gap-1.5 transition-all ${
+              totalQuantity > 0 && !isSubmitting
                 ? 'bg-brand-primary hover:bg-brand-primary-hover active:scale-95'
                 : 'bg-gray-300 cursor-not-allowed'
             }`}
           >
-            {t.checkout_button}
+            <Send className="w-3.5 h-3.5" />
+            <span>{t.checkout_button}</span>
           </button>
         </div>
       )}

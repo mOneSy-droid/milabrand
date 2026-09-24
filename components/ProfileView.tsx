@@ -221,7 +221,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             onClick={() =>
               handleOpenInfo(
                 t.contact_us,
-                "Murojaat va takliflar uchun:\nTelegram: @mila_brand_support\nTelefon: +998 71 200 00 00\nIsh vaqti: 09:00 - 20:00"
+                "Murojaat va takliflar uchun:\nTelegram: @milabranduz\nTelefon: +998 71 200 00 00\nIsh vaqti: 09:00 - 20:00"
               )
             }
             className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
@@ -270,7 +270,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </a>
 
             <a
-              href="https://t.me"
+              href="https://t.me/milabranduz"
               target="_blank"
               rel="noreferrer"
               className="w-10 h-10 rounded-full bg-[#24A1DE] flex items-center justify-center text-white shadow-sm active:scale-95 transition-transform"

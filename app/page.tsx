@@ -76,15 +76,11 @@ export default function Home() {
 
       const data = await res.json();
       if (data.ok) {
-        if (data.verified && data.user) {
+        if (data.user) {
           setUser(data.user);
           setIsVerified(true);
-          setShowVerificationModal(false);
-        } else {
-          // User exists in Telegram but not verified in Bot
-          setIsVerified(false);
-          setShowVerificationModal(true);
         }
+        setShowVerificationModal(false);
         if (data.isDevPreview) {
           setIsDevPreview(true);
         }
@@ -344,7 +340,7 @@ export default function Home() {
 
   const handleSupportClick = () => {
     triggerHaptic('medium');
-    const url = 'https://t.me/mila_brand_bot';
+    const url = 'https://t.me/milabranduz';
     const tg = getTelegramWebApp();
     if (tg) {
       tg.openTelegramLink(url);
@@ -483,6 +479,7 @@ export default function Home() {
         {activeTab === 'cart' && (
           <CartView
             cartItems={cartItems}
+            user={user}
             onUpdateQty={handleUpdateCartQty}
             onRemoveItem={handleRemoveCartItem}
             onClearSelected={handleClearSelectedCart}
@@ -536,14 +533,6 @@ export default function Home() {
         />
       )}
 
-      {/* Phone Verification Modal if user opened WebApp without bot verification */}
-      {showVerificationModal && (
-        <PhoneVerificationModal
-          onCheckAgain={checkAuth}
-          botUsername={process.env.TELEGRAM_BOT_USERNAME || 'mila_brand_bot'}
-          lang={lang}
-        />
-      )}
 
       {/* Bottom Navigation Bar with 5 Tabs matching Screenshot 1-5 */}
       <BottomNav

@@ -65,17 +65,17 @@ export async function getAuthenticatedUser(req: NextRequest): Promise<{
 
     if (!dbUser) {
       return {
-        user: null,
-        isVerified: false,
-        error: 'User not registered. Please send /start to the Telegram bot and share your phone number.',
-      };
-    }
-
-    if (!dbUser.isVerified || !dbUser.phone) {
-      return {
-        user: null,
-        isVerified: false,
-        error: 'Phone number not verified. Please verify your phone number in the Telegram bot.',
+        user: {
+          id: `tg-${authResult.user.id}`,
+          telegramId: authResult.user.id.toString(),
+          firstName: authResult.user.first_name,
+          lastName: authResult.user.last_name || null,
+          username: authResult.user.username || null,
+          phone: null,
+          isVerified: true,
+          createdAt: new Date().toISOString(),
+        },
+        isVerified: true,
       };
     }
 
