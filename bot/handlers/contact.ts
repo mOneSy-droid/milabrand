@@ -72,28 +72,26 @@ export async function handleContactMessage(ctx: Context) {
 
     // 1. Try setting native Telegram Web App menu button
     try {
-      if (isHttps) {
-        await ctx.api.setChatMenuButton({
-          chat_id: fromUser.id,
-          menu_button: {
-            type: 'web_app',
-            text: '🛍 Sayt',
-            web_app: { url: webAppUrl },
-          },
-        });
-      }
+      await ctx.api.setChatMenuButton({
+        chat_id: fromUser.id,
+        menu_button: {
+          type: 'web_app',
+          text: '🛍 Saytni ochish',
+          web_app: { url: webAppUrl },
+        },
+      });
     } catch (e) {
       // Ignored
     }
 
-    // 2. Update persistent reply keyboard to "Saytni ochish"
+    // 2. Update persistent reply keyboard to "Saytni ochish" (Web App)
     await ctx.reply('✅ Telefon raqamingiz muvaffaqiyatli tasdiqlandi!', {
       reply_markup: {
         keyboard: [
           [
             {
               text: '🛍 Saytni ochish',
-              ...(isHttps ? { web_app: { url: webAppUrl } } : {}),
+              web_app: { url: webAppUrl },
             },
           ],
         ],

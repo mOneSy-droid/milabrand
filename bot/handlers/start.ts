@@ -35,18 +35,16 @@ export async function handleStartCommand(ctx: Context) {
     const isHttps = webAppUrl.startsWith('https://');
 
     if (existingUser && existingUser.isVerified && existingUser.phone) {
-      // Set chat menu button if supported
+      // Set chat menu button to Web App
       try {
-        if (isHttps) {
-          await ctx.api.setChatMenuButton({
-            chat_id: from.id,
-            menu_button: {
-              type: 'web_app',
-              text: '🛍 Sayt',
-              web_app: { url: webAppUrl },
-            },
-          });
-        }
+        await ctx.api.setChatMenuButton({
+          chat_id: from.id,
+          menu_button: {
+            type: 'web_app',
+            text: '🛍 Saytni ochish',
+            web_app: { url: webAppUrl },
+          },
+        });
       } catch (e) {}
 
       await ctx.reply(
