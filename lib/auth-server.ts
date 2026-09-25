@@ -63,19 +63,11 @@ export async function getAuthenticatedUser(req: NextRequest): Promise<{
       where: { telegramId },
     });
 
-    if (!dbUser) {
+    if (!dbUser || !dbUser.isVerified || !dbUser.phone || dbUser.phone.trim() === '') {
       return {
-        user: {
-          id: `tg-${authResult.user.id}`,
-          telegramId: authResult.user.id.toString(),
-          firstName: authResult.user.first_name,
-          lastName: authResult.user.last_name || null,
-          username: authResult.user.username || null,
-          phone: null,
-          isVerified: true,
-          createdAt: new Date().toISOString(),
-        },
-        isVerified: true,
+        user: null,
+        isVerified: false,
+        error: 'MILA do‘koniga kirish uchun avval Telegram botimizda ro‘yxatdan o‘ting.',
       };
     }
 

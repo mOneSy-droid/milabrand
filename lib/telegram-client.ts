@@ -88,9 +88,21 @@ export function initTelegramApp() {
     try {
       tg.ready();
       tg.expand();
-      // Set header color to white to match luxury aesthetics
-      tg.headerColor = '#ffffff';
-      tg.backgroundColor = '#f8f9fa';
+      // Disable vertical swipe gestures to prevent pull-down collapse & minimize chevron
+      if (typeof (tg as any).disableVerticalSwipes === 'function') {
+        (tg as any).disableVerticalSwipes();
+      }
+      // Set Telegram header and background colors to clean white
+      if (typeof (tg as any).setHeaderColor === 'function') {
+        (tg as any).setHeaderColor('#ffffff');
+      } else {
+        tg.headerColor = '#ffffff';
+      }
+      if (typeof (tg as any).setBackgroundColor === 'function') {
+        (tg as any).setBackgroundColor('#ffffff');
+      } else {
+        tg.backgroundColor = '#ffffff';
+      }
     } catch (e) {
       console.warn('Error initializing Telegram WebApp:', e);
     }

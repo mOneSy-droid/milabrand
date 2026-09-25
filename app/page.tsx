@@ -14,6 +14,8 @@ import FavoritesView from '@/components/FavoritesView';
 import ProfileView from '@/components/ProfileView';
 import CatalogView from '@/components/CatalogView';
 import PhoneVerificationModal from '@/components/PhoneVerificationModal';
+import RegistrationRequiredScreen from '@/components/RegistrationRequiredScreen';
+import BrandLogo from '@/components/BrandLogo';
 import { ProductCardSkeleton, CategoryPillsSkeleton } from '@/components/SkeletonLoader';
 import {
   initTelegramApp,
@@ -28,8 +30,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [lang, setLang] = useState<Language>('uz');
   const [user, setUser] = useState<AppUser | null>(null);
-  const [isVerified, setIsVerified] = useState<boolean>(true);
-  const [showVerificationModal, setShowVerificationModal] = useState<boolean>(false);
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
   const [isDevPreview, setIsDevPreview] = useState<boolean>(false);
 
   // Data states
@@ -62,8 +64,9 @@ export default function Home() {
     return headers;
   }, []);
 
-  // 1. Initial Authentication & Verification Check
+  // 1. Initial Authentication & Verification Check (Strict registration gating)
   const checkAuth = useCallback(async () => {
+    setIsAuthChecking(true);
     try {
       const tg = getTelegramWebApp();
       const initData = tg?.initData || '';
@@ -75,18 +78,22 @@ export default function Home() {
       });
 
       const data = await res.json();
-      if (data.ok) {
-        if (data.user) {
-          setUser(data.user);
-          setIsVerified(true);
-        }
-        setShowVerificationModal(false);
+      if (data.ok && data.verified && data.user) {
+        setUser(data.user);
+        setIsVerified(true);
         if (data.isDevPreview) {
           setIsDevPreview(true);
         }
+      } else {
+        setUser(null);
+        setIsVerified(false);
       }
     } catch (err) {
       console.error('Auth verification error:', err);
+      setUser(null);
+      setIsVerified(false);
+    } finally {
+      setIsAuthChecking(false);
     }
   }, []);
 
@@ -170,18 +177,17 @@ export default function Home() {
   useEffect(() => {
     initTelegramApp();
     checkAuth();
-    fetchCategories();
-  }, [checkAuth, fetchCategories]);
+  }, [checkAuth]);
 
-  // Fetch products and user data
+  // Fetch products, categories and user data ONLY if user is registered and verified
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    fetchCart();
-    fetchFavorites();
-  }, [fetchCart, fetchFavorites]);
+    if (isVerified) {
+      fetchCategories();
+      fetchProducts();
+      fetchCart();
+      fetchFavorites();
+    }
+  }, [isVerified, fetchCategories, fetchProducts, fetchCart, fetchFavorites]);
 
   // Sync Telegram WebApp BackButton
   useEffect(() => {
@@ -350,6 +356,27 @@ export default function Home() {
   };
 
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+
+  // 1. Loading splash while checking auth
+  if (isAuthChecking) {
+    return (
+      <main className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
+        <BrandLogo size="lg" />
+        <div className="w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mt-6" />
+        <span className="text-xs text-gray-400 font-medium mt-3">Yuklanmoqda...</span>
+      </main>
+    );
+  }
+
+  // 2. Strict registration barrier: User cannot open shop without bot registration
+  if (!isVerified) {
+    return (
+      <RegistrationRequiredScreen
+        onCheckAgain={checkAuth}
+        botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'milabrand_bot'}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-brand-bg text-brand-black flex flex-col justify-between max-w-md mx-auto shadow-2xl relative">

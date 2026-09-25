@@ -16,14 +16,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ children }) => {
         className="absolute top-0 right-0 w-3/4 h-full bg-[#8fa9c4]/30 -skew-x-12 translate-x-12 pointer-events-none"
       />
 
-      {/* Brand Watermark / Header in Hero (As in Screenshot 1) */}
-      <div className="relative z-10 flex items-center justify-between px-5 pt-2 pb-1">
+      {/* Brand Subtitle Bar in Hero (Safe from Telegram top controls) */}
+      <div className="relative z-10 flex items-center justify-between px-6 pt-3 pb-1">
         <span className="text-[10px] uppercase tracking-[0.25em] text-brand-dark/70 font-semibold">
           High Fashion Bags
         </span>
-        <div className="opacity-90">
-          <BrandLogo size="sm" withSubtitle={false} />
-        </div>
+        <span className="text-[10px] tracking-wider text-brand-dark/60 font-medium">
+          MILA Exclusive
+        </span>
       </div>
 
       {/* Model with Lady Dior Powder Blue Bag */}

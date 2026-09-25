@@ -22,7 +22,10 @@ export const Header: React.FC<HeaderProps> = ({
   onSupportClick,
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-brand-border/60 px-4 py-3 transition-all duration-200">
+    <header
+      style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 10px)' }}
+      className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-brand-border/60 px-4 pb-3 transition-all duration-200"
+    >
       <div className="flex items-center justify-between max-w-lg mx-auto">
         {/* Left: Back button or Avatar */}
         <div className="flex items-center min-w-[40px]">

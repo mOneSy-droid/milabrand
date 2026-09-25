@@ -64,13 +64,23 @@ export async function handleStartCommand(ctx: Context) {
     console.error('[BOT] Error checking user verification status:', error);
   }
 
-  // 3. User is not verified: Ask for native Telegram contact
+  // 3. User is not verified: Reset menu button and ask to register first
+  try {
+    await ctx.api.setChatMenuButton({
+      chat_id: from.id,
+      menu_button: { type: 'default' },
+    });
+  } catch (e) {}
+
   await ctx.reply(
-    `MILA Brand'ga xush kelibsiz.\n\nDavom etish uchun telefon raqamingizni tasdiqlang.`,
+    `✨ <b>MILA Luxury Brand rasmiy botiga xush kelibsiz!</b>\n\n` +
+    `Web App do‘konimizga kirish, sumkalar katalogini ko‘rish va xarid qilish uchun avval ro‘yxatdan o‘tishingiz lozim.\n\n` +
+    `Iltimos, pastdagi <b>[ 📱 Ro‘yxatdan o‘tish (Telefon raqamni yuborish) ]</b> tugmasini bosing:`,
     {
+      parse_mode: 'HTML',
       reply_markup: {
         keyboard: [
-          [{ text: '📱 Telefon nomer tasdiqlash', request_contact: true }],
+          [{ text: '📱 Ro‘yxatdan o‘tish (Telefon raqamni yuborish)', request_contact: true }],
         ],
         resize_keyboard: true,
         one_time_keyboard: true,

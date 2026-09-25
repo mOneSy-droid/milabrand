@@ -55,21 +55,14 @@ export async function POST(req: NextRequest) {
       // Prisma error fallback
     }
 
-    if (!user) {
-      try {
-        user = await prisma.user.create({
-          data: {
-            telegramId,
-            firstName: authResult.user.first_name,
-            lastName: authResult.user.last_name || null,
-            username: authResult.user.username || null,
-            phone: '',
-            isVerified: true,
-          },
-        });
-      } catch (e) {
-        // Fallback
-      }
+    // STRICT CHECK: User must have registered via Bot and shared their verified phone number
+    if (!user || !user.isVerified || !user.phone || user.phone.trim() === '') {
+      return NextResponse.json({
+        ok: true,
+        verified: false,
+        user: null,
+        message: 'MILA do‘koniga kirish uchun avval Telegram botimizda ro‘yxatdan o‘ting.',
+      });
     }
 
     return NextResponse.json({

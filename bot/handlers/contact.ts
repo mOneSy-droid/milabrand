@@ -32,7 +32,7 @@ export async function handleContactMessage(ctx: Context) {
       {
         reply_markup: {
           keyboard: [
-            [{ text: '📱 Telefon nomer tasdiqlash', request_contact: true }],
+            [{ text: '📱 Ro‘yxatdan o‘tish (Telefon raqamni yuborish)', request_contact: true }],
           ],
           resize_keyboard: true,
           one_time_keyboard: true,
