@@ -7,6 +7,7 @@ export interface AddProductWizardState {
     | 'PHOTO'
     | 'NAME'
     | 'CATEGORY'
+    | 'NEW_CAT_INPUT'
     | 'PRICE'
     | 'OLD_PRICE'
     | 'DESCRIPTION'
@@ -96,8 +97,23 @@ export async function handleWizardStep(ctx: Context): Promise<boolean> {
 
   const text = ctx.message?.text?.trim();
 
+  // Guard against menu commands or slash commands consuming the wizard
+  const MENU_COMMANDS = [
+    '➕ Tovar qo‘shish',
+    '📦 Tovarlar',
+    '🗂 Kategoriyalar',
+    '✏️ Tovarni tahrirlash',
+    '🗑 Tovarni o‘chirish',
+    '📊 Statistika',
+  ];
+
+  if (text && (MENU_COMMANDS.includes(text) || (text.startsWith('/') && text !== '/cancel'))) {
+    adminWizards.delete(from.id);
+    return false;
+  }
+
   // Cancel action
-  if (text === '❌ Bekor qilish') {
+  if (text === '❌ Bekor qilish' || text === '/cancel') {
     adminWizards.delete(from.id);
     await ctx.reply('❌ Tovar qo‘shish bekor qilindi.', {
       reply_markup: {
@@ -152,6 +168,40 @@ export async function handleWizardStep(ctx: Context): Promise<boolean> {
       await ctx.reply('🗂 3-QADAM: Mahsulot kategoriyasini tanlang:', {
         reply_markup: keyboard,
       });
+      return true;
+    }
+
+    case 'NEW_CAT_INPUT': {
+      if (!text) {
+        await ctx.reply('Iltimos, yangi kategoriya nomini kiriting:');
+        return true;
+      }
+
+      const slug = text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      try {
+        const newCat = await prisma.category.create({
+          data: {
+            name: text,
+            slug: `${slug}-${Date.now().toString(36)}`,
+            isActive: true,
+          },
+        });
+        state.categoryId = newCat.id;
+        state.categoryName = newCat.name;
+        state.step = 'PRICE';
+
+        await ctx.reply(
+          `✅ Yangi kategoriya "${newCat.name}" yaratildi va tanlandi.\n\n` +
+          `💰 4-QADAM: Mahsulot narxini kiriting (UZS):\n(Masalan: 549000)`
+        );
+      } catch (err) {
+        console.error('[BOT] Error creating category in wizard:', err);
+        await ctx.reply('Kategoriya yaratishda xatolik yuz berdi. Iltimos boshqa nom kiriting:');
+      }
       return true;
     }
 
@@ -284,7 +334,9 @@ export async function handleWizardCallbackQuery(ctx: Context): Promise<boolean> 
 
     const catId = callbackData.replace('wiz_cat_', '');
     if (catId === 'new') {
-      await ctx.reply('Yangi kategoriya yaratish uchun Telegram bot bosh menyusidan "🗂 Kategoriyalar" bo‘limiga kiring.');
+      state.step = 'NEW_CAT_INPUT';
+      await ctx.editMessageText('✏️ Yangi kategoriya yaratish tanlandi.');
+      await ctx.reply('Iltimos, yangi kategoriya nomini kiriting (masalan: Yangi to‘plam):');
       return true;
     }
 

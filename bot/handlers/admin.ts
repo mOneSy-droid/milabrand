@@ -220,15 +220,19 @@ export async function handleAdminCallbackQuery(ctx: Context): Promise<boolean> {
   if (data.startsWith('adm_toggle_')) {
     await ctx.answerCallbackQuery();
     const id = data.replace('adm_toggle_', '');
-    const product = await prisma.product.findUnique({ where: { id } });
-    if (product) {
-      await prisma.product.update({
-        where: { id },
-        data: { isActive: !product.isActive },
-      });
-      await ctx.editMessageText(
-        `✅ "${product.name}" holati o‘zgartirildi: ${!product.isActive ? '🟢 Faol' : '🔴 Nofaol'}`
-      );
+    try {
+      const product = await prisma.product.findUnique({ where: { id } });
+      if (product) {
+        await prisma.product.update({
+          where: { id },
+          data: { isActive: !product.isActive },
+        });
+        await ctx.editMessageText(
+          `✅ "${product.name}" holati o‘zgartirildi: ${!product.isActive ? '🟢 Faol' : '🔴 Nofaol'}`
+        );
+      }
+    } catch (err) {
+      console.error('[BOT] Error toggling product status:', err);
     }
     return true;
   }
@@ -237,28 +241,91 @@ export async function handleAdminCallbackQuery(ctx: Context): Promise<boolean> {
   if (data.startsWith('adm_view_')) {
     await ctx.answerCallbackQuery();
     const id = data.replace('adm_view_', '');
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: { category: true, images: true },
-    });
-    if (product) {
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id },
+        include: { category: true, images: true },
+      });
+      if (product) {
+        const details =
+          `💎 MILA TOVAR TAFSILOTLARI\n\n` +
+          `📦 Nomi: ${product.name}\n` +
+          `🗂 Kategoriya: ${product.category?.name || 'Mavjud emas'}\n` +
+          `💰 Narxi: ${Number(product.price).toLocaleString('uz-UZ')} UZS\n` +
+          `🏷 Eski narxi: ${product.oldPrice ? Number(product.oldPrice).toLocaleString('uz-UZ') + ' UZS' : 'Yo‘q'}\n` +
+          `🟢 Holati: ${product.isActive ? '🟢 Faol (Do‘konda ko‘rinadi)' : '🔴 Nofaol (Yashiringan)'}\n` +
+          `🖼 Rasmlar soni: ${product.images.length} ta\n` +
+          `📝 Tavsif: ${product.description || 'Yo‘q'}\n\n` +
+          `ID: ${product.id}`;
+
+        const keyboard = new InlineKeyboard()
+          .text('💰 Narxini o‘zgartirish', `adm_change_price_${product.id}`)
+          .text('📝 Tavsifni o‘zgartirish', `adm_change_desc_${product.id}`)
+          .row()
+          .text(product.isActive ? '🔴 Yashirish' : '🟢 Yoqish', `adm_toggle_${product.id}`)
+          .text('🗑 Tovarni o‘chirish', `adm_del_confirm_${product.id}`);
+
+        await ctx.reply(details, { reply_markup: keyboard });
+      }
+    } catch (err) {
+      console.error('[BOT] Error viewing product:', err);
+    }
+    return true;
+  }
+
+  // Edit options menu for product
+  if (data.startsWith('adm_edit_options_')) {
+    await ctx.answerCallbackQuery();
+    const id = data.replace('adm_edit_options_', '');
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id },
+        include: { category: true, images: true },
+      });
+      if (!product) {
+        await ctx.reply('Mahsulot topilmadi.');
+        return true;
+      }
+
       const details =
-        `💎 MILA TOVAR TAFSILOTLARI\n\n` +
+        `✏️ MAHSULOTNI TAHRIRLASH\n\n` +
         `📦 Nomi: ${product.name}\n` +
-        `🗂 Kategoriya: ${product.category.name}\n` +
+        `🗂 Kategoriya: ${product.category?.name || 'Mavjud emas'}\n` +
         `💰 Narxi: ${Number(product.price).toLocaleString('uz-UZ')} UZS\n` +
         `🏷 Eski narxi: ${product.oldPrice ? Number(product.oldPrice).toLocaleString('uz-UZ') + ' UZS' : 'Yo‘q'}\n` +
-        `🟢 Holati: ${product.isActive ? 'Faol (Do‘konda ko‘rinadi)' : 'Nofaol'}\n` +
-        `🖼 Rasmlar soni: ${product.images.length} ta\n` +
+        `🟢 Holati: ${product.isActive ? '🟢 Faol (Ko‘rinadi)' : '🔴 Nofaol (Yashiringan)'}\n` +
         `📝 Tavsif: ${product.description || 'Yo‘q'}\n\n` +
-        `ID: ${product.id}`;
+        `Quyidagi amallardan birini tanlang:`;
 
       const keyboard = new InlineKeyboard()
-        .text('✏️ Narxini o‘zgartirish', `adm_change_price_${product.id}`)
-        .text('🗑 Tovarni o‘chirish', `adm_del_confirm_${product.id}`);
+        .text('💰 Narxni o‘zgartirish', `adm_change_price_${product.id}`)
+        .text('📝 Tavsifni o‘zgartirish', `adm_change_desc_${product.id}`)
+        .row()
+        .text(product.isActive ? '🔴 Yashirish' : '🟢 Faollashtirish', `adm_toggle_${product.id}`)
+        .text('🗑 Tovarni o‘chirish', `adm_del_confirm_${product.id}`)
+        .row()
+        .text('❌ Bekor qilish', 'adm_edit_cancel');
 
       await ctx.reply(details, { reply_markup: keyboard });
+    } catch (err) {
+      console.error('[BOT] Error opening edit options:', err);
     }
+    return true;
+  }
+
+  // Edit description trigger
+  if (data.startsWith('adm_change_desc_')) {
+    await ctx.answerCallbackQuery();
+    const id = data.replace('adm_change_desc_', '');
+    adminActions.set(from.id, { type: 'EDIT_DESC', targetId: id });
+    await ctx.reply('Mahsulot uchun yangi tavsif matnini kiriting:');
+    return true;
+  }
+
+  // Edit cancel
+  if (data === 'adm_edit_cancel') {
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText('❌ Tahrirlash bekor qilindi.');
     return true;
   }
 
@@ -266,20 +333,24 @@ export async function handleAdminCallbackQuery(ctx: Context): Promise<boolean> {
   if (data.startsWith('adm_del_confirm_')) {
     await ctx.answerCallbackQuery();
     const id = data.replace('adm_del_confirm_', '');
-    const product = await prisma.product.findUnique({ where: { id } });
-    if (!product) {
-      await ctx.reply('Tovar topilmadi.');
-      return true;
+    try {
+      const product = await prisma.product.findUnique({ where: { id } });
+      if (!product) {
+        await ctx.reply('Tovar topilmadi.');
+        return true;
+      }
+
+      const keyboard = new InlineKeyboard()
+        .text('❌ Bekor qilish', 'adm_del_cancel')
+        .text('🗑 Ha, o‘chirish', `adm_del_exec_${product.id}`);
+
+      await ctx.reply(
+        `⚠️ Ushbu mahsulotni ("${product.name}") butunlay o‘chirishni tasdiqlaysizmi?\n\nBu amalni ortga qaytarib bo‘lmaydi.`,
+        { reply_markup: keyboard }
+      );
+    } catch (err) {
+      console.error('[BOT] Error in delete confirm:', err);
     }
-
-    const keyboard = new InlineKeyboard()
-      .text('❌ Bekor qilish', 'adm_del_cancel')
-      .text('🗑 Ha, o‘chirish', `adm_del_exec_${product.id}`);
-
-    await ctx.reply(
-      `⚠️ Ushbu mahsulotni ("${product.name}") butunlay o‘chirishni tasdiqlaysizmi?\n\nBu amalni ortga qaytarib bo‘lmaydi.`,
-      { reply_markup: keyboard }
-    );
     return true;
   }
 
@@ -287,8 +358,13 @@ export async function handleAdminCallbackQuery(ctx: Context): Promise<boolean> {
   if (data.startsWith('adm_del_exec_')) {
     await ctx.answerCallbackQuery();
     const id = data.replace('adm_del_exec_', '');
-    await prisma.product.delete({ where: { id } });
-    await ctx.editMessageText('🗑 Mahsulot muvaffaqiyatli o‘chirildi.');
+    try {
+      await prisma.product.delete({ where: { id } });
+      await ctx.editMessageText('🗑 Mahsulot muvaffaqiyatli o‘chirildi.');
+    } catch (err) {
+      console.error('[BOT] Error executing product delete:', err);
+      await ctx.editMessageText('⚠️ Mahsulotni o‘chirishda xatolik yoki allaqachon o‘chirilgan.');
+    }
     return true;
   }
 
@@ -310,13 +386,17 @@ export async function handleAdminCallbackQuery(ctx: Context): Promise<boolean> {
   if (data.startsWith('cat_toggle_')) {
     await ctx.answerCallbackQuery();
     const id = data.replace('cat_toggle_', '');
-    const cat = await prisma.category.findUnique({ where: { id } });
-    if (cat) {
-      await prisma.category.update({
-        where: { id },
-        data: { isActive: !cat.isActive },
-      });
-      await ctx.editMessageText(`✅ "${cat.name}" holati o‘zgartirildi: ${!cat.isActive ? '🟢 Faol' : '⏳ Tez kunda'}`);
+    try {
+      const cat = await prisma.category.findUnique({ where: { id } });
+      if (cat) {
+        await prisma.category.update({
+          where: { id },
+          data: { isActive: !cat.isActive },
+        });
+        await ctx.editMessageText(`✅ "${cat.name}" holati o‘zgartirildi: ${!cat.isActive ? '🟢 Faol' : '⏳ Tez kunda'}`);
+      }
+    } catch (err) {
+      console.error('[BOT] Error toggling category:', err);
     }
     return true;
   }
@@ -344,6 +424,22 @@ export async function handleAdminActionText(ctx: Context): Promise<boolean> {
   const action = adminActions.get(from.id);
   if (!action) return false;
 
+  // Guard against menu button clicks or commands consuming the action
+  const MENU_COMMANDS = [
+    '➕ Tovar qo‘shish',
+    '📦 Tovarlar',
+    '🗂 Kategoriyalar',
+    '✏️ Tovarni tahrirlash',
+    '🗑 Tovarni o‘chirish',
+    '📊 Statistika',
+    '❌ Bekor qilish',
+  ];
+
+  if (MENU_COMMANDS.includes(text) || text.startsWith('/')) {
+    adminActions.delete(from.id);
+    return false;
+  }
+
   if (action.type === 'NEW_CATEGORY') {
     const slug = text
       .toLowerCase()
@@ -370,7 +466,7 @@ export async function handleAdminActionText(ctx: Context): Promise<boolean> {
   if (action.type === 'EDIT_PRICE' && action.targetId) {
     const num = parseInt(text.replace(/[^\d]/g, ''), 10);
     if (isNaN(num) || num <= 0) {
-      await ctx.reply('Noto‘g‘ri narx. Iltimos, musbat raqam kiriting:');
+      await ctx.reply('Noto‘g‘ri narx. Iltimos, musbat raqam kiriting (masalan: 590000):');
       return true;
     }
 
@@ -384,6 +480,21 @@ export async function handleAdminActionText(ctx: Context): Promise<boolean> {
     } catch (err) {
       console.error(err);
       await ctx.reply('Narxni yangilashda xatolik yuz berdi.');
+    }
+    return true;
+  }
+
+  if (action.type === 'EDIT_DESC' && action.targetId) {
+    try {
+      const updated = await prisma.product.update({
+        where: { id: action.targetId },
+        data: { description: text },
+      });
+      adminActions.delete(from.id);
+      await ctx.reply(`✅ "${updated.name}" mahsuloti tavsifi yangilandi.`);
+    } catch (err) {
+      console.error(err);
+      await ctx.reply('Tavsifni yangilashda xatolik yuz berdi.');
     }
     return true;
   }

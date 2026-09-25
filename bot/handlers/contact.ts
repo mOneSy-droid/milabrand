@@ -6,11 +6,11 @@ import { WEB_APP_URL, getSafeWebAppUrl, getOpenShopInlineKeyboard } from '../con
  * Normalizes a phone number to international format, e.g. +998901234567
  */
 export function normalizePhoneNumber(rawPhone: string): string {
-  let cleaned = rawPhone.replace(/[^\d+]/g, '');
-  if (!cleaned.startsWith('+')) {
-    cleaned = '+' + cleaned;
+  let digits = rawPhone.replace(/[^\d]/g, '');
+  if (digits.length === 9) {
+    digits = '998' + digits;
   }
-  return cleaned;
+  return '+' + digits;
 }
 
 /**
@@ -25,8 +25,8 @@ export async function handleContactMessage(ctx: Context) {
   const contact = message.contact;
   const fromUser = message.from;
 
-  // STRICT VALIDATION: contact.user_id must match message.from.id
-  if (!contact.user_id || contact.user_id !== fromUser.id) {
+  // STRICT VALIDATION: If contact is tied to a user_id, it must match the sender's id
+  if (contact.user_id && contact.user_id !== fromUser.id) {
     await ctx.reply(
       '⚠️ Xatolik: Iltimos, faqat o‘zingizning Telegram akkauntingizga tegishli telefon raqamingizni yuboring.\n\nBoshqa shaxsning kontaktini yuborish mumkin emas.',
       {

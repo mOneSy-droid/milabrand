@@ -1,10 +1,16 @@
 import { Context } from 'grammy';
 import prisma from '../../lib/prisma';
 import { isAdmin, WEB_APP_URL, getSafeWebAppUrl, getOpenShopInlineKeyboard } from '../config';
+import { clearAdminAction } from './admin';
+import { clearWizardState } from './product-wizard';
 
 export async function handleStartCommand(ctx: Context) {
   const from = ctx.from;
   if (!from) return;
+
+  // Clear any pending wizard or single-step action state
+  clearAdminAction(from.id);
+  clearWizardState(from.id);
 
   // 1. Check if user is an Admin
   if (isAdmin(from.id)) {
