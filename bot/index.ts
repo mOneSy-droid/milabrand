@@ -179,8 +179,15 @@ async function bootstrapBot() {
     }
   });
 
+  try {
+    await bot.api.deleteWebhook({ drop_pending_updates: true });
+  } catch (e) {
+    // Ignore error if webhook was not active
+  }
+
   console.log('🚀 MILA Telegram Bot is running...');
   bot.start({
+    drop_pending_updates: true,
     onStart: (botInfo) => {
       console.log(`✅ Bot @${botInfo.username} started successfully!`);
     },
