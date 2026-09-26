@@ -392,13 +392,7 @@ export default function Home() {
       <div className="flex-1 w-full">
         {activeTab === 'home' && (
           <div className="w-full pb-28 animate-fade-in">
-            {/* Header (Matching Screenshot 1) */}
-            <Header
-              onProfileClick={() => setActiveTab('profile')}
-              onSupportClick={handleSupportClick}
-            />
-
-            {/* High Fashion Hero Banner with Lady Dior Model (Matching Screenshot 1) */}
+            {/* High Fashion Hero Banner with Lady Dior Model */}
             <HeroBanner>
               <SearchBar
                 value={searchQuery}

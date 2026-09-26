@@ -55,10 +55,10 @@ export async function handleStartCommand(ctx: Context) {
 
       await ctx.reply(
         `Xush kelibsiz, <b>${existingUser.firstName || 'hurmatli mijoz'}</b>!\n\n` +
-        `MILA Luxury Fashion katalogini ochish va xaridlarni boshlash uchun quyidagi havola yoki tugmani bosing:\n\n` +
-        `🔗 <b>Sayt havolasi:</b> <a href="${webAppUrl}">${webAppUrl}</a>`,
+        `MILA Luxury Fashion katalogini ochish va xaridlarni boshlash uchun pastdagi <b>[ 🛍 Saytni ochish ]</b> tugmasini bosing:`,
         {
           parse_mode: 'HTML',
+          link_preview_options: { is_disabled: true },
           reply_markup: {
             inline_keyboard: getOpenShopInlineKeyboard(webAppUrl),
           },

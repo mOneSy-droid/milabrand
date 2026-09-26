@@ -99,15 +99,14 @@ export async function handleContactMessage(ctx: Context) {
       },
     });
 
-    // 3. Send official site link and interactive open buttons
+    // 3. Send interactive open button
     await ctx.reply(
       `🎉 <b>Tabriklaymiz, ro‘yxatdan muvaffaqiyatli o‘tdingiz!</b>\n\n` +
       `MILA Luxury Brand do‘konimizga xush kelibsiz.\n` +
-      `Eksklyuziv sumkalar to‘plamini ko‘rish va xarid qilish uchun quyidagi havola orqali saytni oching:\n\n` +
-      `🔗 <b>Sayt havolasi:</b> <a href="${webAppUrl}">${webAppUrl}</a>\n\n` +
-      `<i>Saytga kirish uchun quyidagi tugmani bosing:</i>`,
+      `Eksklyuziv sumkalar to‘plamini ko‘rish va xarid qilish uchun pastdagi <b>[ 🛍 Saytni ochish ]</b> tugmasini bosing:`,
       {
         parse_mode: 'HTML',
+        link_preview_options: { is_disabled: true },
         reply_markup: {
           inline_keyboard: getOpenShopInlineKeyboard(webAppUrl),
         },

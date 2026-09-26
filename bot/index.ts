@@ -147,11 +147,11 @@ async function bootstrapBot() {
         if (user && user.isVerified && user.phone) {
           await ctx.reply(
             `Hurmatli <b>${user.firstName || 'mijoz'}</b>!\n\n` +
-            `MILA Luxury Brand sumkalar katalogini ko‘rish va xarid qilish uchun quyidagi havola orqali saytni ochishingiz mumkin:\n\n` +
-            `🔗 <b>Sayt havolasi:</b> <a href="${webAppUrl}">${webAppUrl}</a>\n\n` +
+            `MILA Luxury Brand sumkalar katalogini ko‘rish va xarid qilish uchun pastdagi <b>[ 🛍 Saytni ochish ]</b> tugmasini bosing.\n\n` +
             `Savollar yoki alohida buyurtmalar bo‘yicha: @milabranduz`,
             {
               parse_mode: 'HTML',
+              link_preview_options: { is_disabled: true },
               reply_markup: {
                 inline_keyboard: getOpenShopInlineKeyboard(webAppUrl),
               },
